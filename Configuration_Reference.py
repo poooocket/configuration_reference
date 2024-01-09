@@ -74,6 +74,7 @@ with data_show_placeholder.container():
     st.dataframe(original_df, height=800)
 
 with st.sidebar:
+    st.subheader("Configuration Reference")
     with st.form("my_form"):
         # 创建一个滑块选择器，选择范围
         min_value, max_value = st.slider(
