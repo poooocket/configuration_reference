@@ -4,21 +4,125 @@ import matplotlib.pyplot as plt
 import re
 import pandas as pd
 
+# 定义条件判断函数，根据数值大小替换成范围
+def replace_with_range(value):
+    if value < 10:
+        return "<10"
+    if 10 <= value < 15:
+        return "10-15"
+    elif 15 <= value < 20:
+        return "15-20"
+    elif 20 <= value < 25:
+        return "20-25"
+    elif 25 <= value < 30:
+        return "25-30"
+    elif 30 <= value < 35:
+        return "30-35" 
+    elif 35 <= value < 40:
+        return "35-40" 
+    else:
+        return ">40"
+
+# 定义一个函数，用于提取字符串中的数字部分
+def extract_number(s):
+    if pd.notnull(s):
+        pattern = r'\d+'  # 正则表达式匹配一个或多个数字
+        numbers = re.findall(pattern, s)
+        if numbers:
+            return int(numbers[0])  # 返回第一个匹配到的数字
+    else:
+        return None
+    
+def extract_model(text):
+    """
+    Extract the brand from a string by identifying the year and returning the text before it.
+    Assumes the year is a four-digit number and part of a larger string.
+    """
+    import re
+
+    # Find all four-digit numbers in the text
+    match = re.search(r'\d{4}', text)
+    if match:
+        year_index = match.start()
+        return text[:year_index].strip()
+    return text
+
+def model_count(df, column_name):
+    model_list = []
+    for configuration in df[column_name]:
+        model = extract_model(configuration)
+        model_list.append(model)
+    return len(set(model_list))
 
 # 在页面上添加标题
 st.set_page_config(
     layout="wide",  # 设置布局为宽屏
     initial_sidebar_state="expanded",
 )
-
+st.subheader("Configuration Reference")
 
 # 读取数据
-original_df = pd.read_csv('configuration.csv')
-# 将价格数据由字符串转换为数值
-original_df['官方指导价'] = original_df['官方指导价'].str.replace('万', '').astype(float)
+df = pd.read_csv('configuration.csv')
+
 # 重命名列名
 rename_dict = {'官方指导价': '官方指导价(万)'}
-original_df.rename(columns=rename_dict, inplace=True)
+df.rename(columns=rename_dict, inplace=True)
+
+ # 基本清洗
+df['官方指导价(万)'] = df['官方指导价(万)'].str.replace('万', '').astype(float)# 将价格数据由字符串转换为数值
+df.fillna("None", inplace=True) # 填空
+df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x) # 去除空格
+df = df.applymap(lambda x: re.sub(r'\s*图示$', '', x) if isinstance(x, str) and re.search(r'\s*图示$', x) else x) # 去除“图示”字符
+
+ #处理字符数据
+df['驾驶辅助影像'] = df['驾驶辅助影像'].replace({'': 'None', '●倒车影像图示 ●360°全景影像 ●透明影像': '●倒车影像 ●360°全景影像 ●透明影像', '●倒车影像  ●360°全景影像': '●倒车影像 ●360°全景影像'}, regex=False)
+df['巡航系统'] = df['巡航系统'].replace({'': 'None', '●定速巡航图示 ●自适应巡航 ●全速自适应巡航': '●定速巡航 ●自适应巡航 ●全速自适应巡航'}, regex=False)
+df['手机App远程控制'] = df['手机App远程控制'].replace({'●远程控制 ●充电管理 ●服务预约': '●充电管理 ●远程控制 ●服务预约',
+                                        '●车辆监控 ●充电管理 ●服务预约 ●远程控制': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●远程控制 ●充电管理 ●服务预约 ●车辆监控': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●远程控制 ●车辆监控 ●充电管理 ●服务预约': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●数字钥匙 ●车辆监控 ●远程控制 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●数字钥匙': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约', 
+                                        '●数字钥匙 ●充电管理 ●远程控制 ●车辆监控 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●数字钥匙 ●远程控制 ●充电管理 ●服务预约 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●数字钥匙 ●远程控制 ●服务预约 ●充电管理 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●数字钥匙 ●远程控制 ●车辆监控 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ○数字钥匙': '○数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●车辆监控 ●远程控制 ●数字钥匙 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●远程控制 ●数字钥匙 ●充电管理 ●服务预约 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
+                                        '●车辆监控 ●充电管理 ●服务预约 ●远程控制 ●智能寻车助手': '●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
+                                        '●车辆监控 ●充电管理 ●服务预约 ●远程控制 ●智能寻车助手 ●数字钥匙': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
+                                        '●数字钥匙 ●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
+                                        '●数字钥匙 ●车辆监控 ●远程控制 ●服务预约 ●充电管理 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
+                                        '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●数字钥匙 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手'
+                                        }, regex=False)
+
+df['车载智能系统'] = df['车载智能系统'].replace({'●DiLink智能网联': '●DiLink智能网联系统'}, regex=False)
+df['辅助驾驶操作系统'] = df['辅助驾驶操作系统'].replace({'': 'None', '●DiPilot智能辅助驾驶系统': '●DiPilot智能驾驶辅助系统'}, regex=False)
+df['USB/Type-C最大充电功率'] = df['USB/Type-C最大充电功率'].replace({'': 'None'}, regex=False)
+df['主动安全预警系统'] = df['主动安全预警系统'].replace({'': 'None', '●车道偏离预警 ●前方碰撞预警  ●倒车车侧预警 ●DOW开门预警': '●车道偏离预警 ●前方碰撞预警 ●倒车车侧预警 ●DOW开门预警'}, regex=False)
+df['4G/5G网络'] = df['4G/5G网络'].replace({'': 'None'}, regex=False)
+df['车载智能芯片'] = df['车载智能芯片'].replace({'': 'None'}, regex=False)
+df['辅助驾驶芯片'] = df['辅助驾驶芯片'].replace({'': 'None'}, regex=False)
+df['车载智能芯片'] = df['车载智能芯片'].replace({'●骁龙8155': '●高通骁龙8155',
+                                        '●高通8155':'●高通骁龙8155',
+                                        '●高通6125':'●高通骁龙6125',
+                                        '●高通骁龙SA8155':'●高通骁龙8155'}, regex=False)
+df['语音分区域唤醒识别功能'] = df['语音分区域唤醒识别功能'].replace({'': 'None'}, regex=False)
+df['遥控钥匙类型'] = df['遥控钥匙类型'].replace({'○智能遥控钥匙 ●NFC/RFID钥匙 ●手机蓝牙钥匙': '○智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙', 
+                                    '○智能遥控钥匙1200元 ●手机蓝牙钥匙 ●NFC/RFID钥匙': '○智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙',
+                                    '●普通遥控钥匙  ●可穿戴钥匙': '●普通遥控钥匙 ●可穿戴钥匙',
+                                    '●普通遥控钥匙  ●可穿戴钥匙 ●手机蓝牙钥匙': '●普通遥控钥匙 ●手机蓝牙钥匙 ●可穿戴钥匙',
+                                    '●智能遥控钥匙   ○可穿戴钥匙': '●智能遥控钥匙 ○可穿戴钥匙',
+                                    '●智能遥控钥匙 ●NFC/RFID钥匙 ●手机蓝牙钥匙 ●UWB数字钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙 ●UWB数字钥匙',
+                                    '●智能遥控钥匙 ●可穿戴钥匙 ●手机蓝牙钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ●可穿戴钥匙',
+                                    '●智能遥控钥匙 ●手机蓝牙钥匙  ○可穿戴钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ○可穿戴钥匙 '}, regex=False)
+
+# 处理雷达和摄像头数据，将字符串中的数字部分提取出来，然后转换为整数
+df['超声波雷达数量(个)'] = df['超声波雷达数量(个)'].apply(extract_number)
+df['毫米波雷达数量(个)'] = df['毫米波雷达数量(个)'].apply(extract_number)
+df['车外摄像头数量(个)'] = df['车外摄像头数量(个)'].apply(extract_number)
+df['车内摄像头数量(个)'] = df['车内摄像头数量(个)'].apply(extract_number)
 
 # 配置分组
 basic_info = ['厂商', '级别', '能源类型', '上市时间', '电动机', '纯电续航里程(km)工信部', '纯电续航里程(km)CLTC', '充电时间(小时)', '快充电量(%)', '最大功率(kW)', '最大扭矩(N·m)', '变速箱', '长x宽x高(mm)', '车身结构', '最高车速(km/h)', '官方百公里加速时间(s)', '百公里耗电量(kWh/100km)', '电能当量燃料消耗量(L/100km)', '等速续航里程(km)', '整车保修期限', '首任车主保修期限', '6万公里保养总成本预估']
@@ -65,23 +169,20 @@ dict = {'基本信息': basic_info,
         }
 keys_list = list(dict.keys())
 
-
-
 data_show_placeholder = st.empty() 
-
 with data_show_placeholder.container():
-    st.caption(f"共{len(original_df)}款车型配置")
-    st.dataframe(original_df, height=800)
+    model_list = model_count(df, 'Label Name')
+    st.caption(f"共{model_list}款车型，{len(df)}款配置")
+    st.dataframe(df, height=800)
 
 with st.sidebar:
-    st.subheader("Configuration Reference")
     with st.form("my_form"):
         # 创建一个滑块选择器，选择范围
         min_value, max_value = st.slider(
             "选择车型价格范围(万)",
-            min_value=int(original_df['官方指导价(万)'].min()),
-            max_value=int(original_df['官方指导价(万)'].max()),
-            value=(int(original_df['官方指导价(万)'].min()), int(original_df['官方指导价(万)'].max()))
+            min_value=int(df['官方指导价(万)'].min()),
+            max_value=int(df['官方指导价(万)'].max()),
+            value=(int(df['官方指导价(万)'].min()), int(df['官方指导价(万)'].max()))
         )
 
         selected_keys = st.multiselect("选择参数配置", keys_list)
@@ -89,142 +190,30 @@ with st.sidebar:
 
 # 根据选择器筛选数据
 if submitted:
-    df = original_df[(original_df['官方指导价(万)'] >= min_value) & (original_df['官方指导价(万)'] <= max_value)]
+    filter_df = df[(df['官方指导价(万)'] >= min_value) & (df['官方指导价(万)'] <= max_value)]
+    
+
     data_show_placeholder.empty()
     with data_show_placeholder.container():
         if not selected_keys:
-            st.caption(f"共{len(df)}款车型配置")
+            model_list = model_count(df, 'Label Name')
+            st.caption(f"共{model_list}款车型，{len(df)}款配置")
             st.dataframe(df)
         else:
             selected_columns = ['Label Name',  '官方指导价(万)']
             for key in selected_keys:
                 for column_name in dict[key]:
                     selected_columns.append(column_name)
-            st.caption(f"共{len(df)}款车型配置")
-            st.dataframe(df[selected_columns])    
+            model_list = model_count(filter_df, 'Label Name')
+            st.caption(f"共{model_list}款车型，{len(filter_df)}款配置")
+            st.dataframe(filter_df[selected_columns])    
         st.divider()  
-        # 定义条件判断函数，根据数值大小替换成范围
-        def replace_with_range(value):
-            if value < 10:
-                return "<10"
-            if 10 <= value < 15:
-                return "10-15"
-            elif 15 <= value < 20:
-                return "15-20"
-            elif 20 <= value < 25:
-                return "20-25"
-            elif 25 <= value < 30:
-                return "25-30"
-            elif 30 <= value < 35:
-                return "30-35" 
-            elif 35 <= value < 40:
-                return "35-40" 
-            else:
-                return ">40"
-
+        
         # 使用apply函数将数值根据条件判断替换成范围
-        df['官方指导价(万)'] = df['官方指导价(万)'].apply(replace_with_range)
-
-        #处理雷达和摄像头数据
-        # 定义一个函数，用于提取字符串中的数字部分
-        def extract_number(s):
-            if pd.notnull(s):
-                pattern = r'\d+'  # 正则表达式匹配一个或多个数字
-                numbers = re.findall(pattern, s)
-                if numbers:
-                    return int(numbers[0])  # 返回第一个匹配到的数字
-            else:
-                return None
-
-        # 将字符串中的数字部分提取出来，然后转换为整数
-        df['超声波雷达数量(个)'] = df['超声波雷达数量(个)'].apply(extract_number)
-        df['毫米波雷达数量(个)'] = df['毫米波雷达数量(个)'].apply(extract_number)
-        df['车外摄像头数量(个)'] = df['车外摄像头数量(个)'].apply(extract_number)
-        df['车内摄像头数量(个)'] = df['车内摄像头数量(个)'].apply(extract_number)
-
-
-        # 基本清洗
-        df.fillna("None", inplace=True) # 填空
-        df = df.applymap(lambda x: x.strip() if isinstance(x, str) else x) # 去除空格
-        df = df.applymap(lambda x: re.sub(r'\s*图示$', '', x) if isinstance(x, str) and re.search(r'\s*图示$', x) else x) # 去除“图示”字符
-
-
-        #处理字符数据
-
-        # df.rename(columns={"4G/5G网络": "4G_5G网络", "USB/Type-C接口数量": "USB_Type-C接口数量", "USB/Type-C最大充电功率": "USB_Type-C最大充电功率", "110V/220V/230V电源插座": "110V_220V_230V电源插座"}, inplace=True)
-
-        df['驾驶辅助影像'] = df['驾驶辅助影像'].replace({'': 'None', '●倒车影像图示 ●360°全景影像 ●透明影像': '●倒车影像 ●360°全景影像 ●透明影像', '●倒车影像  ●360°全景影像': '●倒车影像 ●360°全景影像'}, regex=False)
-
-        df['巡航系统'] = df['巡航系统'].replace({'': 'None', '●定速巡航图示 ●自适应巡航 ●全速自适应巡航': '●定速巡航 ●自适应巡航 ●全速自适应巡航'}, regex=False)
-
-        df['手机App远程控制'] = df['手机App远程控制'].replace({'●远程控制 ●充电管理 ●服务预约': '●充电管理 ●远程控制 ●服务预约',
-                                                '●车辆监控 ●充电管理 ●服务预约 ●远程控制': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●远程控制 ●充电管理 ●服务预约 ●车辆监控': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●远程控制 ●车辆监控 ●充电管理 ●服务预约': '●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●数字钥匙 ●车辆监控 ●远程控制 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●数字钥匙': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约', 
-                                                '●数字钥匙 ●充电管理 ●远程控制 ●车辆监控 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●数字钥匙 ●远程控制 ●充电管理 ●服务预约 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●数字钥匙 ●远程控制 ●服务预约 ●充电管理 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●数字钥匙 ●远程控制 ●车辆监控 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ○数字钥匙': '○数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●车辆监控 ●远程控制 ●数字钥匙 ●充电管理 ●服务预约': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●远程控制 ●数字钥匙 ●充电管理 ●服务预约 ●车辆监控': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约',
-                                                '●车辆监控 ●充电管理 ●服务预约 ●远程控制 ●智能寻车助手': '●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
-                                                '●车辆监控 ●充电管理 ●服务预约 ●远程控制 ●智能寻车助手 ●数字钥匙': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
-                                                '●数字钥匙 ●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
-                                                '●数字钥匙 ●车辆监控 ●远程控制 ●服务预约 ●充电管理 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手',
-                                                '●车辆监控 ●远程控制 ●充电管理 ●服务预约 ●数字钥匙 ●智能寻车助手': '●数字钥匙 ●车辆监控 ●充电管理 ●远程控制 ●服务预约 ●智能寻车助手'
-                                                }, regex=False)
-
-
-        df['车载智能系统'] = df['车载智能系统'].replace({'●DiLink智能网联': '●DiLink智能网联系统'}, regex=False)
-
-        df['辅助驾驶操作系统'] = df['辅助驾驶操作系统'].replace({'': 'None', '●DiPilot智能辅助驾驶系统': '●DiPilot智能驾驶辅助系统'}, regex=False)
-
-        df['USB/Type-C最大充电功率'] = df['USB/Type-C最大充电功率'].replace({'': 'None'}, regex=False)
-
-        df['主动安全预警系统'] = df['主动安全预警系统'].replace({'': 'None', '●车道偏离预警 ●前方碰撞预警  ●倒车车侧预警 ●DOW开门预警': '●车道偏离预警 ●前方碰撞预警 ●倒车车侧预警 ●DOW开门预警'}, regex=False)
-
-        df['4G/5G网络'] = df['4G/5G网络'].replace({'': 'None'}, regex=False)
-
-        df['车载智能芯片'] = df['车载智能芯片'].replace({'': 'None'}, regex=False)
-
-        df['辅助驾驶芯片'] = df['辅助驾驶芯片'].replace({'': 'None'}, regex=False)
-
-        df['语音分区域唤醒识别功能'] = df['语音分区域唤醒识别功能'].replace({'': 'None'}, regex=False)
-
-        df['遥控钥匙类型'] = df['遥控钥匙类型'].replace({'○智能遥控钥匙 ●NFC/RFID钥匙 ●手机蓝牙钥匙': '○智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙', 
-                                            '○智能遥控钥匙1200元 ●手机蓝牙钥匙 ●NFC/RFID钥匙': '○智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙',
-                                            '●普通遥控钥匙  ●可穿戴钥匙': '●普通遥控钥匙 ●可穿戴钥匙',
-                                            '●普通遥控钥匙  ●可穿戴钥匙 ●手机蓝牙钥匙': '●普通遥控钥匙 ●手机蓝牙钥匙 ●可穿戴钥匙',
-                                            '●智能遥控钥匙   ○可穿戴钥匙': '●智能遥控钥匙 ○可穿戴钥匙',
-                                            '●智能遥控钥匙 ●NFC/RFID钥匙 ●手机蓝牙钥匙 ●UWB数字钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ●NFC/RFID钥匙 ●UWB数字钥匙',
-                                            '●智能遥控钥匙 ●可穿戴钥匙 ●手机蓝牙钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ●可穿戴钥匙',
-                                            '●智能遥控钥匙 ●手机蓝牙钥匙  ○可穿戴钥匙': '●智能遥控钥匙 ●手机蓝牙钥匙 ○可穿戴钥匙 '}, regex=False)
-
-
-        
-
-        
-    
+        filter_df['官方指导价(万)'] = filter_df['官方指导价(万)'].apply(replace_with_range)
         for column_name in selected_columns[2:]:
-            cross_tab = pd.crosstab(df[column_name], df['官方指导价(万)'])
-            # 绘制热力图
-            # plt.rcParams["font.family"] = "Arial Unicode MS"
-            # plt.figure(figsize=(12, 6))
-            # sns.heatmap(cross_tab, annot=True, cmap='Blues', fmt='d', linewidths=0.5, cbar_kws={'label': '数量(个)'})
-            # plt.xlabel('官方指导价(万)')
-            # plt.ylabel(column_name)
-            # plt.title(column_name + ' - 官方指导价')
-            # plt.xticks(rotation=45)
+            cross_tab = pd.crosstab(filter_df[column_name], filter_df['官方指导价(万)'])
             col1, col2 = st.columns(2)
-            col1.write(cross_tab)
-            # col2.pyplot(plt)
+            col1.dataframe(cross_tab)
             col2.bar_chart(cross_tab)
             st.divider()
-        
-
-
-            # # plt.savefig(f'data/configuration/heatmap/{column_name}_heatmap.svg', format='svg', bbox_inches='tight')
-            # # plt.show()
