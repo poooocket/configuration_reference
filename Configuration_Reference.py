@@ -76,7 +76,7 @@ st.set_page_config(
 st.subheader("Configuration Reference")
 
 # 读取数据
-df = pd.read_csv('data/configuration/Configuration.csv')
+df = pd.read_csv('configuration.csv')
 df.drop('Label Name', axis=1, inplace=True)
 
 data_show_placeholder = st.empty() 
