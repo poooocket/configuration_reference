@@ -79,24 +79,24 @@ st.subheader("Configuration Reference")
 df = pd.read_csv('configuration.csv')
 df.drop('Label Name', axis=1, inplace=True)
 
+if 'price_range' not in st.session_state:
+    st.session_state['price_range'] = (int(df['官方指导价(万)'].min()), int(df['官方指导价(万)'].max()))
+
+if 'selected_options' not in st.session_state:
+    st.session_state['selected_options'] = []
+
 data_show_placeholder = st.empty() 
 with data_show_placeholder.container():
-    model_numbers = len(set(df['车型'].to_list()))
+    model_numbers = len(set(df['车型'].tolist()))
     st.caption(f"共{model_numbers}款车型，{len(df)}款配置")
     st.dataframe(df, height=800)
 
 with st.sidebar:
-    with st.form("my_form"):
-        # 创建一个滑块选择器，选择范围
-        min_value, max_value = st.slider(
-            "选择车型价格范围(万)",
-            min_value=int(df['官方指导价(万)'].min()),
-            max_value=int(df['官方指导价(万)'].max()),
-            value=(int(df['官方指导价(万)'].min()), int(df['官方指导价(万)'].max()))
-        )
-
-        selected_keys = st.multiselect("选择参数配置", keys_list)
-        submitted = st.form_submit_button("确定")
+    # 创建一个滑块选择器，选择范围
+    min_value, max_value = st.slider("选择车型价格范围(万)", min_value=int(df['官方指导价(万)'].min()), max_value=int(df['官方指导价(万)'].max()), value = st.session_state['price_range'])
+    st.session_state['price_range'] = (min_value, max_value)
+    selected_keys = st.multiselect("选择参数配置", keys_list, default=st.session_state['selected_options'])
+    submitted = st.button("确定")
 
 # 根据选择器筛选数据
 if submitted:
@@ -104,15 +104,16 @@ if submitted:
     data_show_placeholder.empty()
     with data_show_placeholder.container():
         if not selected_keys:
-            model_numbers = len(set(df['车型'].to_list()))
+            model_numbers = len(set(df['车型'].tolist()))
             st.caption(f"共{model_numbers}款车型，{len(df)}款配置")
             st.dataframe(df)
         else:
+            st.session_state['selected_options'] = selected_keys
             selected_columns = ['车型', '年款', '官方指导价(万)']
             for key in selected_keys:
                 for column_name in dict[key]:
                     selected_columns.append(column_name)
-            model_numbers = len(set(filter_df['车型'].to_list()))
+            model_numbers = len(set(filter_df['车型'].tolist()))
             st.caption(f"共{model_numbers}款车型，{len(filter_df)}款配置")
             st.dataframe(filter_df[selected_columns])    
         st.divider()  
