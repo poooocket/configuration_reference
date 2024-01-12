@@ -12,22 +12,35 @@ st.subheader("Configuration Search")
 # 读取数据
 df = pd.read_csv('configuration.csv')
 df.drop('Label Name', axis=1, inplace=True)
+# 获取配置列表
+config_list = df.columns.tolist()[4:]
+
+if 'price_range_2' not in st.session_state:
+    st.session_state['price_range_2'] = (int(df['官方指导价(万)'].min()), int(df['官方指导价(万)'].max()))
+
+if 'selected_config' not in st.session_state:
+    st.session_state['selected_config'] = config_list[0]
+
+if 'selected_value' not in st.session_state:
+        st.session_state['selected_value'] = None
 
 with st.sidebar:
-    min_value, max_value = st.slider(
-                    "选择车型价格范围(万)",
-                    min_value=int(df['官方指导价(万)'].min()),
-                    max_value=int(df['官方指导价(万)'].max()),
-                    value=(int(df['官方指导价(万)'].min()), int(df['官方指导价(万)'].max()))
-                    )
-    # 选择行和列
-    # selected_model = st.selectbox("选择车型", df['车型'].unique())
-    selected_config = st.selectbox("选择配置", df.columns.tolist()[4:], index=None, label_visibility="collapsed", placeholder="请选择配置" )
+    min_value, max_value = st.slider("选择车型价格范围(万)", min_value=int(df['官方指导价(万)'].min()), max_value=int(df['官方指导价(万)'].max()), value = st.session_state['price_range_2'])
+    st.session_state['price_range_2'] = (min_value, max_value)
+    
+    config_index = config_list.index(st.session_state['selected_config'])
+    selected_config = st.selectbox("选择配置", config_list, index=config_index) 
+    st.session_state['selected_config'] = selected_config 
 
-    if selected_config == None:
-        selected_value = st.selectbox('选择配置值:', ['先选配置'], index=None, label_visibility="collapsed", placeholder="请选择配置值" )
-    else:
-        selected_value = st.selectbox('选择配置值:', df[selected_config].unique(), index=None, label_visibility="collapsed", placeholder="请选择配置值" )  
+    if selected_config:
+        value_list = df[selected_config].unique().tolist()
+        if st.session_state['selected_value'] == None:
+            selected_value = st.selectbox('选择配置值:', value_list, index=None)
+            st.session_state['selected_value'] = selected_value  
+        else:
+            value_index = value_list.index(st.session_state['selected_value'])
+            selected_value = st.selectbox('选择配置值:', value_list, index=value_index) 
+            st.session_state['selected_value'] = selected_value      
     button = st.button('确定')
 
 data_show = st.empty()
@@ -47,4 +60,3 @@ else:
         model_numbers = len(set(filtered_df['车型'].tolist()))
         st.caption(f"查询结果：共{model_numbers}款车型，{len(filtered_df)}款配置")
         st.dataframe(filtered_df, height=800)
- 
