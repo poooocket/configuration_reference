@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import re
 import pandas as pd
+import streamlit.components.v1 as components
 
 # 定义条件判断函数，根据数值大小替换成范围
 def replace_with_range(value):
@@ -73,6 +74,19 @@ st.set_page_config(
     layout="wide",  # 设置布局为宽屏
     initial_sidebar_state="expanded",
 )
+# Google Analytics tracking code
+ga_tracking_code = """
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-H65P6G3P8E"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-H65P6G3P8E');
+</script>
+"""
+# Embed the tracking code
+components.html(ga_tracking_code, height=0, width=0)
 st.subheader("Configuration Reference")
 
 # 读取数据
