@@ -108,7 +108,6 @@ with data_show_placeholder.container():
 with st.sidebar:
     # 创建一个滑块选择器，选择范围
     min_value, max_value = st.slider("选择车型价格范围(万)", min_value=int(df['官方指导价(万)'].min()), max_value=int(df['官方指导价(万)'].max()), value = st.session_state['price_range'])
-    st.session_state['price_range'] = (min_value, max_value)
     selected_keys = st.multiselect("选择参数配置", keys_list, default=st.session_state['selected_options'])
     submitted = st.button("确定")
 
@@ -122,7 +121,6 @@ if submitted:
             st.caption(f"共{model_numbers}款车型，{len(df)}款配置")
             st.dataframe(df)
         else:
-            st.session_state['selected_options'] = selected_keys
             selected_columns = ['车型', '年款', '官方指导价(万)']
             for key in selected_keys:
                 for column_name in dict[key]:
@@ -140,3 +138,5 @@ if submitted:
             col1.dataframe(cross_tab)
             col2.bar_chart(cross_tab)
             st.divider()
+    st.session_state['price_range'] = (min_value, max_value)
+    st.session_state['selected_options'] = selected_keys
