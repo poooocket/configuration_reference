@@ -28,7 +28,6 @@ with st.sidebar:
     min_value, max_value = st.slider("选择车型价格范围(万)", min_value=int(df['官方指导价(万)'].min()), max_value=int(df['官方指导价(万)'].max()), value = st.session_state['price_range_2'])
     config_index = config_list.index(st.session_state['selected_config'])
     selected_config = st.selectbox("选择配置", config_list, index=config_index) 
-    st.session_state['selected_config'] = selected_config 
 
     if selected_config:
         value_list = df[selected_config].unique().tolist()
@@ -57,4 +56,5 @@ else:
         st.caption(f"查询结果：共{model_numbers}款车型，{len(filtered_df)}款配置")
         st.dataframe(filtered_df, height=800)
     st.session_state['price_range_2'] = (min_value, max_value)
+    st.session_state['selected_config'] = selected_config 
     st.session_state['selected_value'] = selected_value 
